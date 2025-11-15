@@ -1,0 +1,249 @@
+name: Node.js Web Application CI/CD
+
+# This workflow demonstrates a complete CI/CD pipeline for a Node.js web application
+# Generated with Claude as a DevOps Agent
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18.x'
+  DOCKER_REGISTRY: docker.io
+  IMAGE_NAME: myapp/nodejs-webapp
+
+jobs:
+  # Job 1: Code Quality and Linting
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run ESLint
+      run: npm run lint
+
+    - name: Check code formatting
+      run: npm run format:check
+
+  # Job 2: Run tests with multiple Node.js versions
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run unit tests
+      run: npm test -- --coverage
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      if: matrix.node-version == '18.x'
+      with:
+        files: ./coverage/coverage-final.json
+        flags: unittests
+
+  # Job 3: Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  # Job 4: Build application
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint, test, security]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-output
+        path: dist/
+        retention-days: 7
+
+  # Job 5: Build and push Docker image
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: dist/
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=registry,ref=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+        cache-to: type=registry,ref=${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+  # Job 6: Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    steps:
+    - name: Deploy to staging server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USERNAME }}
+        key: ${{ secrets.STAGING_SSH_KEY }}
+        script: |
+          docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:develop
+          docker stop webapp-staging || true
+          docker rm webapp-staging || true
+          docker run -d \
+            --name webapp-staging \
+            -p 3000:3000 \
+            --env-file /etc/webapp/.env.staging \
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:develop
+
+    - name: Verify deployment
+      run: |
+        sleep 10
+        curl -f https://staging.example.com/health || exit 1
+
+  # Job 7: Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USERNAME }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
+        script: |
+          docker pull ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker stop webapp-production || true
+          docker rm webapp-production || true
+          docker run -d \
+            --name webapp-production \
+            -p 3000:3000 \
+            --env-file /etc/webapp/.env.production \
+            --restart unless-stopped \
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+    - name: Verify deployment
+      run: |
+        sleep 10
+        curl -f https://example.com/health || exit 1
+
+    - name: Notify team
+      if: success()
+      uses: slackapi/slack-github-action@v1
+      with:
+        webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+        payload: |
+          {
+            "text": "✅ Production deployment successful: ${{ github.sha }}"
+          }

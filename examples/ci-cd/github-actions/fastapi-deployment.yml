@@ -1,0 +1,317 @@
+name: FastAPI Application CI/CD
+
+# Complete pipeline for Python FastAPI application with AWS ECS deployment
+# Generated with Claude as a DevOps Agent
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: my-fastapi-app
+  ECS_CLUSTER: production-cluster
+  ECS_SERVICE: fastapi-service
+  ECS_TASK_DEFINITION: fastapi-task
+
+jobs:
+  # Code quality checks
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Format check with Black
+      run: black --check .
+
+    - name: Lint with Flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --max-complexity=10 --max-line-length=100 --statistics
+
+    - name: Type checking with MyPy
+      run: mypy app/
+
+    - name: Import sorting with isort
+      run: isort --check-only .
+
+  # Run tests
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: Run unit tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379
+      run: |
+        pytest tests/ \
+          --cov=app \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          -v
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Safety check
+      run: |
+        pip install safety
+        safety check --json
+
+    - name: Run Bandit security linter
+      run: |
+        pip install bandit
+        bandit -r app/ -f json -o bandit-report.json
+
+    - name: OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'fastapi-app'
+        path: '.'
+        format: 'HTML'
+
+  # Build and push Docker image
+  build:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    needs: [quality, test, security]
+    if: github.event_name == 'push'
+
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build \
+          --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+          --build-arg VERSION=${{ github.sha }} \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+          .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Scan image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.build-image.outputs.image }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-api.example.com
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Update ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ecs/task-definition-staging.json
+        container-name: fastapi-app
+        image: ${{ needs.build.outputs.image }}
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}-staging
+        cluster: ${{ env.ECS_CLUSTER }}-staging
+        wait-for-service-stability: true
+
+    - name: Run smoke tests
+      run: |
+        sleep 30
+        curl -f https://staging-api.example.com/health || exit 1
+        curl -f https://staging-api.example.com/docs || exit 1
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.example.com
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Update ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ecs/task-definition-production.json
+        container-name: fastapi-app
+        image: ${{ needs.build.outputs.image }}
+
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+    - name: Run smoke tests
+      run: |
+        sleep 30
+        curl -f https://api.example.com/health || exit 1
+
+    - name: Notify deployment
+      if: success()
+      run: |
+        curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "text": "✅ Production deployment successful",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Production Deployment Complete*\n• Commit: `${{ github.sha }}`\n• Author: ${{ github.actor }}\n• Image: `${{ needs.build.outputs.image }}`"
+                }
+              }
+            ]
+          }'
+
+    - name: Create GitHub release
+      if: success()
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: release-${{ github.sha }}
+        release_name: Production Release ${{ github.sha }}
+        body: |
+          Automated production deployment
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+        draft: false
+        prerelease: false
