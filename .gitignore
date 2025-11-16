@@ -78,3 +78,6 @@ aws-credentials
 *.tmp
 *.cache
 node_modules/
+
+# Marketing (private strategy)
+marketing/
