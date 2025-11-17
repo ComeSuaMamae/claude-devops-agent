@@ -1,5 +1,12 @@
 # Claude as a DevOps Agent
 
+[![GitHub stars](https://img.shields.io/github/stars/olushile/claude-devops-agent?style=social)](https://github.com/olushile/claude-devops-agent/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/olushile/claude-devops-agent?style=social)](https://github.com/olushile/claude-devops-agent/network/members)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Last Commit](https://img.shields.io/github/last-commit/olushile/claude-devops-agent)](https://github.com/olushile/claude-devops-agent/commits/main)
+[![GitHub issues](https://img.shields.io/github/issues/olushile/claude-devops-agent)](https://github.com/olushile/claude-devops-agent/issues)
+[![GitHub discussions](https://img.shields.io/github/discussions/olushile/claude-devops-agent)](https://github.com/olushile/claude-devops-agent/discussions)
+
 A comprehensive guide and practical implementation for leveraging Claude AI as an intelligent DevOps agent to automate and enhance DevOps workflows.
 
 ## Overview
